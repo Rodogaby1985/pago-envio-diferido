@@ -14,8 +14,13 @@ export function errorHandler(
   const statusCode = err.statusCode ?? 500;
   const message = err.message ?? 'Internal server error';
 
-  console.error(`[Error] ${req.method} ${req.path} - ${statusCode}: ${message}`, {
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  // Use structured logging to avoid tainted format strings
+  console.error('[Error]', {
+    method: req.method,
+    path: req.path,
+    statusCode,
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 
   res.status(statusCode).json({

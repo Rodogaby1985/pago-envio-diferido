@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import healthRouter from './routes/health';
@@ -18,11 +19,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limiting general para endpoints de API
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting estricto para webhooks
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Rutas
 app.use('/health', healthRouter);
-app.use('/webhooks/tiendanube', tiendanubeWebhookRouter);
-app.use('/webhooks/payments', paymentsWebhookRouter);
-app.use('/orders/:orderId/shipping-charge', shippingChargeRouter);
+app.use('/webhooks/tiendanube', webhookLimiter, tiendanubeWebhookRouter);
+app.use('/webhooks/payments', webhookLimiter, paymentsWebhookRouter);
+app.use('/orders/:orderId/shipping-charge', apiLimiter, shippingChargeRouter);
 
 // 404
 app.use((req, res) => {

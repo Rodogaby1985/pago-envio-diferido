@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getPool } from '../db/client';
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response) => {
+const healthLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/', healthLimiter, async (req: Request, res: Response) => {
   let dbStatus = 'ok';
   let dbVersion = '';
 

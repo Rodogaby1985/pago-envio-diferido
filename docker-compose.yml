@@ -1,0 +1,69 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-pago_envio}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      TIENDANUBE_APP_ID: ${TIENDANUBE_APP_ID:-}
+      TIENDANUBE_APP_SECRET: ${TIENDANUBE_APP_SECRET:-}
+      TIENDANUBE_WEBHOOK_SECRET: ${TIENDANUBE_WEBHOOK_SECRET:-}
+      NAVE_API_KEY: ${NAVE_API_KEY:-}
+      NAVE_API_SECRET: ${NAVE_API_SECRET:-}
+      NAVE_WEBHOOK_SECRET: ${NAVE_WEBHOOK_SECRET:-}
+      NAVE_BASE_URL: ${NAVE_BASE_URL:-https://api.nave.com}
+      NAVE_MODE: ${NAVE_MODE:-sandbox}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      PAYMENT_SUCCESS_URL: ${PAYMENT_SUCCESS_URL:-http://localhost:3000/payment/success}
+      PAYMENT_FAILURE_URL: ${PAYMENT_FAILURE_URL:-http://localhost:3000/payment/failure}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: production
+    command: node dist/db/migrate.js
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-pago_envio}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - migrate
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pago_envio}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_EXPOSE_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-pago_envio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
